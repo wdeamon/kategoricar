@@ -8,19 +8,21 @@ import sqlite3
 import os
 import json
 
+from imports.sqlwork import sqlWork
+from imports.htmlgetter import hzzoHtmlGetter
 from bs4 import BeautifulSoup
-import mechanize
+
 
 
 
 # ##############
 #configuration#
 #############################################
-url = "http://www.hzzo-net.hr/statos_MBO.htm"
+
 serverPort = 8666
 logPort = 8667
 updaterPort = 8668
-serverIP = "192.168.1.131"
+serverIP = "localhost"
 ##############################################
 
 def timer(timeout):
@@ -34,20 +36,15 @@ def timer(timeout):
 
 def dataObrada(data):
     try:
-        con = sqlite3.connect("kategoricar.db")
-        cursor = con.cursor()
-        cursor.execute("select kategorija, mbo, counter from testTable where mbo = :Mbo ", {"Mbo": data["mbo"]})
-        podaci = cursor.fetchall()
+	sql = sqlWork()
+        podaci = sql.returnData("select kategorija, mbo, counter from testTable where mbo = %s" % data["mbo"])
         if (podaci != []):
-            cursor.execute("update testTable set counter = :Counter where mbo= :Mbo ",
-                           {"Mbo": data["mbo"], "Counter": podaci[0][2] + 1})
-            con.commit()
+	    sql.updateData(mbo=data[mbo], counter=podaci[0][2])
+	    sql.commitData()
         else:
             #provjera na netu
-            cursor.execute("insert into testTable values(?,?,?,?,?,?)", (
-            data["mbo"], data["kategorija"], datetime.datetime.now(), 0, data["osnova"], data["podrucni"]))
-            con.commit()
-        con.close()
+	    sql.insertData(mbo=data["mbo"], kategorija=data["kategorija"], osnova=data["osnova"], areacode=data["podrucni"])
+	    sql.commitData()
     except:
         pass
 
@@ -83,11 +80,11 @@ def scraping(html, data):
 
 
 def ubazi(mbo):
-    con = sqlite3.connect("kategoricar.db")
-    cursor = con.cursor()
-    cursor.execute("select mbo, kategorija from testTable where mbo = :Mbo", {"Mbo": mbo})
-    data = cursor.fetchone()
-    con.close()
+    data = sqlWork().returnData("select mbo, kategorija from testTable where mbo = %s" % mbo)
+    try:    
+	data = data[0]
+    except:
+	pass
     try:
         if (data == "[]" or data[1] == "Null"):
             return True
@@ -100,55 +97,31 @@ def destilator(data):
     global url
     
     try:
-        if (data["vrstaZahtjeva"] == "1" or data["vrstaZahtjeva"] == "2"):
-            br = mechanize.Browser()
-            br.set_handle_robots(False)  # ignore robots
-            br.open(url, timeout=8.0)
-            br.select_form(name="isktr")
-            br["upmbo"] = data["mbo"]
-            br["answer"] = "11111"
-            res = br.submit()
-            content = res.read()
-            data = scraping(content, data)
-            br.close()
-            if data["errorCode"] != "0":
-                if data["vrstaZahtjeva"] == "2":
-                    return data["errorCode"]
-                return data
-            con = sqlite3.connect("kategoricar.db")
-            cursor = con.cursor()
-            cursor.execute(
-                "update testTable set kategorija=:Kate, podrucni=:Pon, osnova=:Osn, zadnjiUpdate=:Up where mbo= :Mbo ",
-                {"Mbo": data["mbo"], "Kate": data["kategorija"], "Pon": data["podrucni"], "Osn": data["osnova"],
-                 "Up": data["updateTime"]})
-            con.commit()
-            if data["vrstaZahtjeva"] == "2":
-                return data["errorCode"]
-            return data
-        elif (ubazi(data["mbo"])):
-            br = mechanize.Browser()
-            br.set_handle_robots(False)  # ignore robots
-            br.open(url, timeout=8.0)
-            br.select_form(name="isktr")
-            br["upmbo"] = data["mbo"]
-            br["answer"] = "11111"
-            res = br.submit()
-            content = res.read()
-            podatak = scraping(content, data)
-            br.close()
-            return podatak
-        else:
-            con = sqlite3.connect("kategoricar.db")
-            cursor = con.cursor()
-            cursor.execute("select kategorija, podrucni, osnova, zadnjiUpdate from testTable where mbo = :Mbo",
-                           {"Mbo": data["mbo"]})
-            data_baza = cursor.fetchone()
-            data["kategorija"] = data_baza[0]
-            data["podrucni"] = data_baza[1]
-            data["osnova"] = data_baza[2]
-            data["izvor"] = "1"
-            data["updateTime"] = data_baza[3]
-            return data
+    	if (data["vrstaZahtjeva"] == "1" or data["vrstaZahtjeva"] == "2"):	
+		content = hzzoHtmlGetter().getHtml(data["mbo"])
+        	data = scraping(content, data)
+        	if data["errorCode"] != 0:
+            		return data
+		sql = sqlWork()
+		sql.updateData(mbo=data["mbo"], kategorija=data["kategorija"], areacode=data["podrucni"], osnova=data["osnova"])
+		sql.commitData()
+        	return data
+    	elif (ubazi(data["mbo"])):
+        	content = hzzoHtmlGetter().getHtml(data["mbo"])
+        	podatak = scraping(content, data)
+		sql = sqlWork()
+		sql.updateData(mbo=podatak["mbo"], kategorija=podatak["kategorija"], areacode=podatak["podrucni"],osnova=podatak["osnova"])
+		sql.commitData()
+        	return podatak
+    	else:
+		data_baza = sqlWork().returnData("select kategorija, podrucni, osnova, zadnjiUpdate from testTable where mbo = %s" % data["mbo"])            
+		data_baza = data_baza[0]
+        	data["kategorija"] = data_baza[0]
+        	data["podrucni"] = data_baza[1]
+        	data["osnova"] = data_baza[2]
+        	data["izvor"] = "1"
+        	data["updateTime"] = data_baza[3]
+        	return data
 
     except Exception as inst:
         dataObrada(data)
@@ -156,7 +129,6 @@ def destilator(data):
         #print("Pogreska na serveru! MBO:" + poruka)
         print  "ispis data"
         print str(inst)
-        data = json.loads(data)
         data["errorCode"] = "1"
         if data["vrstaZahtjeva"] == "2":
             return data["errorCode"]
@@ -200,10 +172,7 @@ def updater_thread():
     data = 0
     a = []
     while 1:
-        con = sqlite3.connect("kategoricar.db")
-        cursor = con.cursor()
-        cursor.execute("select  mbo  from testTable where kategorija='Null'")
-        podatak = cursor.fetchall()
+	podatak = sqlWork().returnData("select  mbo  from testTable where kategorija='Null'")
         for y in range(len(podatak)):
             a.append(podatak[y][0])
         if a != "[]":
@@ -225,8 +194,8 @@ def updater_thread():
                         if data == "1":
                             break
                         if data == "3":
-                            cursor.execute("delete from testTable where mbo=:Mbo", {"Mbo": a[x]})
-                            con.commit()
+			    sqlWork(1).deleteData(a[x])
+
 
                     data = 0
                     del a[x]
@@ -235,9 +204,7 @@ def updater_thread():
                     break
 
         if data != "1":
-            cursor.execute(
-                "select mbo  from testTable where julianday('now') - julianday(zadnjiUpdate)>30 and kategorija = 'F' or kategorija = 'A' limit 260")
-            podatak = cursor.fetchall()
+	    podatak=sqlWork().returnData("select mbo  from testTable where julianday('now') - julianday(zadnjiUpdate)>30 and kategorija = 'F' or kategorija = 'A' limit 260")
             for y in range(len(podatak)):
                 a.append(podatak[y][0])
             if a != "[]":
@@ -259,9 +226,7 @@ def updater_thread():
                             if data == "1":
                                 break
                             if data == "3":
-                                cursor.execute("delete from testTable where mbo=:Mbo", {"Mbo": a[x]})
-                                con.commit()
-
+				sqlWork(1).deleteData(a[x])
                         data = 0
                         del a[x]
                         timer(15)
