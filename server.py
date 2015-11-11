@@ -157,102 +157,40 @@ def server_thread():
 
 
 def log_thread(value):
-    file_name = datetime.date.isoformat(datetime.date.today()) + ".txt"
-    datoteka = open(file_name, "a")
-    datoteka.write(value)
-    datoteka.close()
+	pass
+	#hmm tu jos moram staviti kako se spremati log.
+
        
 
 
 def updater_thread():
-    updater_con = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    updater_con.bind((serverIP, updaterPort))
-    rjecnik = {"mbo": "143520838", "kategorija": "A", "podrucni": "004", "osnova": "00112", "brojPristupa": "0",
-               "errorCode": "0", "updateTime": "14", "vrstaZahtjeva": "2", "izvor": "0"}
-    data = 0
-    a = []
-    while 1:
-	podatak = sqlWork().returnData("select  mbo  from testTable where kategorija='Null'")
-        for y in range(len(podatak)):
-            a.append(podatak[y][0])
-        if a != "[]":
-            while (a != "[]"):
-                for x in range(20):
-                    rjecnik["mbo"] = a[x]
-                    updater_con.sendto(json.dumps(rjecnik), (serverIP, serverPort))
-                    data, addr = updater_con.recvfrom(1024)
-                    timer(15)
-                    if data == "1":  # if there is server problems break and wait better times
-                        break
-                    if data == "3":  # if there is error with mbo try 3 more times, if there is everytime every delete it from database
-                        for y in range(2):
-                            updater_con.sendto(str(json.dumps(rjecnik)), (serverIP, serverPort))
-                            data, addr = updater_con.recvfrom(1024)
-                            timer(15)
-                            if data == "0":
-                                break
-                        if data == "1":
-                            break
-                        if data == "3":
-			    sqlWork(1).deleteData(a[x])
+#    updater_con = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#    updater_con.bind((serverIP, updaterPort))
+#    rjecnik = {"mbo": "143520838", "kategorija": "A", "podrucni": "004", "osnova": "00112", "brojPristupa": "0",
+#              "errorCode": "0", "updateTime": "14", "vrstaZahtjeva": "2", "izvor": "0"}
+    pass
+    # prima mbo po mbo i provjerava. U slučaju da se dogode tri pogreške briši mbo iz baze 
 
-
-                    data = 0
-                    del a[x]
-                    timer(15)
-                if data == "1":
-                    break
-
-        if data != "1":
-	    podatak=sqlWork().returnData("select mbo  from testTable where julianday('now') - julianday(zadnjiUpdate)>30 and kategorija = 'F' or kategorija = 'A' limit 260")
-            for y in range(len(podatak)):
-                a.append(podatak[y][0])
-            if a != "[]":
-                while (a != "[]"):
-                    for x in range(20):
-                        rjecnik["mbo"] = a[x]
-                        updater_con.sendto(str(json.dumps(rjecnik)), (serverIP, serverPort))
-                        data, addr = updater_con.recvfrom(1024)
-                        timer(15)
-                        if data == "1":  # if there is server problems break and wait better times
-                            break
-                        if data == "3":  # if there is error with mbo try 3 more times, if there is everytime error delete it from database
-                            for y in range(2):
-                                updater_con.sendto(str(json.dumps(rjecnik)), (serverIP, serverPort))
-                                data, addr = updater_con.recvfrom(1024)
-                                if data == "0":
-                                    break
-                                timer(15)
-                            if data == "1":
-                                break
-                            if data == "3":
-				sqlWork(1).deleteData(a[x])
-                        data = 0
-                        del a[x]
-                        timer(15)
-                    if data == "1":
-                        break
-
-        timer(216000)
 
 
 if __name__ == "__main__":
+    #treba procijeniti dali je taj while potreban ... mislim da ce se maknuti jer samo stvara teren na procesor
     while 1:
         #starting server thread
         tekst = str(threading.enumerate())
         if string.find(tekst, "server") == -1:
-            cunt = threading.Thread(target=server_thread, name="server")
-            cunt.start()
+            MainThread = threading.Thread(target=server_thread, name="server")
+            MainThread.start()
 
 
         #starting log thread
         #if string.find(tekst, "log") == -1:
-        #    cunt = threading.Thread(target=log_thread, name="log")
-        #    cunt.start()
+        #    LogThread = threading.Thread(target=log_thread, name="log")
+        #    LogThread.start()
 
         #starting updater thread
         #if string.find(tekst, "updater") == -1:
-        #    cunt = threading.Thread(target=updater_thread, name="updater")
-        #    cunt.start()
+        #    UpdateThread = threading.Thread(target=updater_thread, name="updater")
+        #    UpdateThread.start()
         timer(30)
 #enter code for checks and so on

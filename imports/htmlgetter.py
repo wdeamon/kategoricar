@@ -9,7 +9,8 @@ class hzzoHtmlGetter():
         	self.br.open(self.url, timeout=8.0)
         	self.br.select_form(name="isktr")
         	self.br["upmbo"] = mbo
-        	self.br["answer"] = "11111"
+		#pogreska na stranici i prima bilo koji broj dok god javascript ne radi kako treba
+        	self.br["answer"] = "11111" #jako olaksava stvar
         	self.res = self.br.submit()
         	self.br.close()
         	return self.res.read()

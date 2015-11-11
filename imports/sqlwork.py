@@ -32,6 +32,10 @@ class sqlWork:
 		self.connection.commit()
 
 
+########################
+###### TEST'S ##########
+########################
+
 #sqlWork(1).insertData(mbo="1112", kategorija="A", vrijeme=datetime.datetime.now(), osnova="00413", areacode="004")
 #print sqlWork().returnResults("select * from testTable where mbo='1112'")
 #sqlWork(1).updateData(mbo="1112", counter=2)

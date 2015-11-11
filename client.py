@@ -17,6 +17,8 @@ import pyHook
 
 
 # variable ---------------------
+ServerPort = 8666
+ServerIP = "localhost"
 prijasnji = ""
 title, title1, keys, keylength = '', '', '', 9
 url = "http://www.hzzo-net.hr/statos_MBO.htm"
@@ -53,7 +55,7 @@ def obrada(value):
 
 def client_za_podatke(value):
     conn = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    conn.sendto(json.dumps(value), ("192.168.1.131", 8666))
+    conn.sendto(json.dumps(value), (ServerIP, ServerPort))
     data,addr = conn.recvfrom(2048)
     conn.close()
     obrada(json.loads(data))
@@ -89,6 +91,7 @@ def keys_collecting(event):
         keys = ""
         print(inst)
         return True
+
 #1. greska servera
 #2. pogreska u podacima
 #3. krivi mbo/ nema podataka
