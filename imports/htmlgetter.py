@@ -12,5 +12,6 @@ class hzzoHtmlGetter():
 		#pogreska na stranici i prima bilo koji broj dok god javascript ne radi kako treba
         	self.br["answer"] = "11111" #jako olaksava stvar
         	self.res = self.br.submit()
-        	self.br.close()
-        	return self.res.read()
+        	data = self.res.read()
+		self.br.close()
+		return data

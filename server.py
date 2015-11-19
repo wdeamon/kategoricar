@@ -97,8 +97,12 @@ def destilator(data):
     global url
     
     try:
-    	if (data["vrstaZahtjeva"] == "1" or data["vrstaZahtjeva"] == "2"):	
+    	if (data["vrstaZahtjeva"] == "1" or data["vrstaZahtjeva"] == "2"):
+		print data["mbo"]	
 		content = hzzoHtmlGetter().getHtml(data["mbo"])
+		htmltext = open("htmlhzzo", "w")
+		htmltext.write(content)
+		htmltext.close()
         	data = scraping(content, data)
         	if data["errorCode"] != 0:
             		return data
@@ -164,11 +168,45 @@ def log_thread(value):
 
 
 def updater_thread():
-#    updater_con = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#    updater_con.bind((serverIP, updaterPort))
-#    rjecnik = {"mbo": "143520838", "kategorija": "A", "podrucni": "004", "osnova": "00112", "brojPristupa": "0",
-#              "errorCode": "0", "updateTime": "14", "vrstaZahtjeva": "2", "izvor": "0"}
-    pass
+	updater_con = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+	updater_con.bind((serverIP, updaterPort))
+	rjecnik = {"mbo": "143520838", "kategorija": "A", "podrucni": "004", "osnova": "00112", "brojPristupa": "0", "errorCode": "0", "updateTime": "14", "vrstaZahtjeva": "2", "izvor":"0"}
+	sql3 = "select mbo from testTable where length(podrucni) is not 5 limit 1;"
+	sql2 = "select mbo from testTable where length(kategorija) is not 1 limit 1;"
+	sql1 = "select mbo from testTable where osnova = 0 or podrucni = 0 limit 1;"
+	sql4 = "select mbo from testTable where kategorija = 'A' or kategorija = 'F' order by zadnjiUpdate limit 1;"
+	
+	data = sqlWork().returnData(sql1)
+	if data != []:
+		data = data[0][0]
+		rjecnik["mbo"] = str(data)
+		updater_con.sendto(json.dumps(rjecnik), (serverIP, serverPort))
+		data, addr = updater_con.recvfrom(2048)
+
+	data = sqlWork().returnData(sql2)
+	if data != []:
+		data = data[0][0]
+		rjecnik["mbo"] = str(data)
+		updater_con.sendto(json.dumps(rjecnik), (serverIP, serverPort))
+		data, addr = updater_con.recvfrom(2048)
+
+	data = sqlWork().returnData(sql3)
+	if data != []:
+		data = data[0][0]
+		rjecnik["mbo"] = str(data)
+		updater_con.sendto(json.dumps(rjecnik), (serverIP, serverPort))
+		data, addr = updater_con.recvfrom(2048)
+	data = sqlWork().returnData(sql4)
+
+	if data != []:
+		data = data[0][0]
+		rjecnik["mbo"] = str(data)
+		updater_con.sendto(json.dumps(rjecnik), (serverIP, serverPort))
+		data, addr = updater_con.recvfrom(2048)
+
+
+
+	timer(60)
     # prima mbo po mbo i provjerava. U slučaju da se dogode tri pogreške briši mbo iz baze 
 
 
@@ -189,8 +227,8 @@ if __name__ == "__main__":
         #    LogThread.start()
 
         #starting updater thread
-        #if string.find(tekst, "updater") == -1:
-        #    UpdateThread = threading.Thread(target=updater_thread, name="updater")
-        #    UpdateThread.start()
+        if string.find(tekst, "updater") == -1:
+            UpdateThread = threading.Thread(target=updater_thread, name="updater")
+            UpdateThread.start()
         timer(30)
 #enter code for checks and so on

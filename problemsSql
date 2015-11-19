@@ -1,0 +1,7 @@
+select * from testTable where length(podrucni) is not 5;
+select * from testTable where length(kategorija) is not 1;
+select * from testTable where osnova = 0 or podrucni = 0;
+select * from testTable where kategorija = 'A' or kategorija = 'F' order by zadnjiUpdate limit 1;
+
+
+
